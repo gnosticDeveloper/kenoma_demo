@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { bime } from '../api/bime'
 import { formatMoney } from '../lib/money'
 import { useApiCall } from '../hooks/useApiCall'
+import { uid } from '../lib/uid'
 import { useToast } from '../components/Toast'
 import { Modal } from '../components/Modal'
 import { Tabs } from '../components/Tabs'
@@ -35,7 +36,7 @@ interface AssignmentRow {
 }
 
 function newAssignmentRowKey(): string {
-  return crypto.randomUUID()
+  return uid()
 }
 
 function buildAssignments(rows: AssignmentRow[]): ProductMetadataAssignmentItem[] {
@@ -396,7 +397,7 @@ export default function BimeProductsPage({ token, permissions }: Props) {
 
         {activeTab === 'variants' && (
           <div className="panel">
-            <div className="field" style={{ marginBottom: '16px', maxWidth: '320px' }}>
+            <div className="field" style={{ marginBottom: '1rem', maxWidth: '20rem' }}>
               <label>{t('bimeProductsPage.name')}</label>
               <Combobox
                 items={productItems}
@@ -416,7 +417,7 @@ export default function BimeProductsPage({ token, permissions }: Props) {
                 rowKey={v => v.id}
                 emptyLabel={t('bimeProductsPage.variantsEmptyState')}
                 headerAction={
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                     {selectedVariantIds.size > 0 && permissions.canManageBime && (
                       <>
                         <span className="td-muted">{t('bimeProductsPage.selectedCount', { count: selectedVariantIds.size })}</span>
@@ -489,7 +490,7 @@ export default function BimeProductsPage({ token, permissions }: Props) {
         title={assignTarget ? t('bimeProductsPage.assignMetadataTitle', { name: assignTarget.name }) : ''}
       >
         <p className="panel-hint">{t('bimeProductsPage.assignMetadataHint')}</p>
-        <div className="field" style={{ marginBottom: '14px' }}>
+        <div className="field" style={{ marginBottom: '0.875rem' }}>
           <AssignmentsInput value={assignRows} onChange={setAssignRows} metadataDefs={metadataDefsList} />
         </div>
         <div className="actions">
@@ -525,8 +526,8 @@ export default function BimeProductsPage({ token, permissions }: Props) {
             />
           </div>
         </div>
-        <div className="field" style={{ marginBottom: '14px' }}>
-          <label style={{ marginBottom: '8px' }}>{t('bimeProductsPage.options')}</label>
+        <div className="field" style={{ marginBottom: '0.875rem' }}>
+          <label style={{ marginBottom: '0.5rem' }}>{t('bimeProductsPage.options')}</label>
           <AssignmentsInput value={variantRows} onChange={setVariantRows} metadataDefs={metadataDefsList} />
         </div>
         <div className="actions">

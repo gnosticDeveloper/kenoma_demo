@@ -4,6 +4,7 @@ import { vassago } from '../api/vassago'
 import { raum } from '../api/raum'
 import { bime } from '../api/bime'
 import { useApiCall } from '../hooks/useApiCall'
+import { uid } from '../lib/uid'
 import { useToast } from '../components/Toast'
 import { Modal } from '../components/Modal'
 import { Tabs } from '../components/Tabs'
@@ -27,7 +28,7 @@ interface RoleRow {
 }
 
 function newRoleRowKey(): string {
-  return crypto.randomUUID()
+  return uid()
 }
 
 function buildRolesMap(rows: RoleRow[]): Record<string, string[]> {
@@ -283,8 +284,8 @@ export default function UsersPage({ token, permissions }: Props) {
             <input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="ada" autoComplete="off" />
           </div>
         </div>
-        <div className="field" style={{ marginBottom: '14px' }}>
-          <label style={{ marginBottom: '8px' }}>{t('usersPage.roles')}</label>
+        <div className="field" style={{ marginBottom: '0.875rem' }}>
+          <label style={{ marginBottom: '0.5rem' }}>{t('usersPage.roles')}</label>
           <RolesInput value={roles} onChange={setRoles} services={services} rolesByService={rolesByService} />
         </div>
         <div className="actions">

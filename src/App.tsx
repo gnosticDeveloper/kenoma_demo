@@ -29,7 +29,7 @@ import { Feedback } from './components/Feedback'
 import { DemoAccounts } from './components/DemoAccounts'
 import {
   OrgsIcon, PricingIcon, ServicesIcon, CredentialsIcon, OnboardingIcon, UsersIcon,
-  LocationsIcon, MetadataIcon, ProductsIcon, StockIcon, ExportsIcon, DrBackupsIcon,
+  LocationsIcon, MetadataIcon, ProductsIcon, StockIcon, ExportsIcon, DrBackupsIcon, MenuIcon,
 } from './components/icons'
 
 type Page = 'orgs' | 'pricing' | 'services' | 'credentials' | 'onboarding' | 'users' | 'exports' | 'dr-backups'
@@ -83,6 +83,7 @@ function AppShell() {
   const [authView, setAuthView] = useState<'login' | 'recover'>('login')
   const [token, setToken] = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const timerRef = useRef<number | null>(null)
   const freshLoginRef = useRef(false)
 
@@ -251,8 +252,26 @@ function AppShell() {
 
   return (
     <div className="app-layout">
-      <Sidebar groups={visibleGroups} activeId={activePage} onSelect={handleNavigate} onLogout={handleLogout} />
+      <Sidebar
+        groups={visibleGroups}
+        activeId={activePage}
+        onSelect={handleNavigate}
+        onLogout={handleLogout}
+        mobileOpen={mobileNavOpen}
+        onMobileClose={() => setMobileNavOpen(false)}
+      />
       <main className="content">
+        <div className="mobile-topbar">
+          <button
+            className="mobile-nav-toggle"
+            onClick={() => setMobileNavOpen(true)}
+            aria-label={t('common.aria.toggleSidebar')}
+            type="button"
+          >
+            <MenuIcon width={20} height={20} />
+          </button>
+          <span className="mobile-topbar-title">Kenoma</span>
+        </div>
         {activePage === 'orgs'           && <OrgsPage token={token} />}
         {activePage === 'exports'        && <ExportsPage token={token} />}
         {activePage === 'dr-backups'     && <DrBackupsPage token={token} />}

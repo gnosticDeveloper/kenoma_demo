@@ -15,13 +15,13 @@ interface ShopBlueprint {
 const SHOPS_BY_LANG: Record<DemoLang, ShopBlueprint[]> = {
   en: [
     { orgName: 'Chapter & Verse Books', contactEmail: 'owner@chapterandverse.example', ownerName: 'Avery', ownerLastName: 'Lund', username: 'avery', preset: 'BOOK_STORE' },
-    { orgName: 'Thimble & Thread', contactEmail: 'owner@thimbleandthread.example', ownerName: 'Morgan', ownerLastName: 'Ibarra', username: 'morgan', preset: 'CLOTHING_STORE' },
+    { orgName: 'Thimble & Thread (Clothing)', contactEmail: 'owner@thimbleandthread.example', ownerName: 'Morgan', ownerLastName: 'Ibarra', username: 'morgan', preset: 'CLOTHING_STORE' },
     { orgName: 'CircuitFix Repair', contactEmail: 'owner@circuitfix.example', ownerName: 'Sam', ownerLastName: 'Okafor', username: 'sam', preset: 'REPAIR_SHOP' },
   ],
   es: [
-    { orgName: 'Capítulo y Verso', contactEmail: 'duena@capituloyverso.example', ownerName: 'Valentina', ownerLastName: 'Rojas', username: 'valentina', preset: 'BOOK_STORE' },
-    { orgName: 'Dedal y Aguja', contactEmail: 'dueno@dedalyaguja.example', ownerName: 'Mateo', ownerLastName: 'Duarte', username: 'mateo', preset: 'CLOTHING_STORE' },
-    { orgName: 'ReparaFix', contactEmail: 'duena@reparafix.example', ownerName: 'Camila', ownerLastName: 'Ferreyra', username: 'camila', preset: 'REPAIR_SHOP' },
+    { orgName: 'Librería Umbral (Librería)', contactEmail: 'duena@libreriaumbral.example', ownerName: 'Valentina', ownerLastName: 'Rojas', username: 'valentina', preset: 'BOOK_STORE' },
+    { orgName: 'Hilo & Trama (Indumentaria)', contactEmail: 'dueno@hiloytrama.example', ownerName: 'Mateo', ownerLastName: 'Duarte', username: 'mateo', preset: 'CLOTHING_STORE' },
+    { orgName: 'Circuito Sur (Reparaciones)', contactEmail: 'duena@circuitosur.example', ownerName: 'Camila', ownerLastName: 'Ferreyra', username: 'camila', preset: 'REPAIR_SHOP' },
   ],
 }
 

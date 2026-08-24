@@ -191,6 +191,14 @@ export function MoreIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+export function MenuIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M3 5.5h14M3 10h14M3 14.5h14" />
+    </Icon>
+  )
+}
+
 export function CloseIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>

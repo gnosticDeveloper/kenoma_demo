@@ -83,7 +83,7 @@ export function DataTable<T>({ columns, rows, rowKey, searchable, searchText, on
             <tbody>
               {sorted.map(row => (
                 <tr key={rowKey(row)} onClick={onRowClick ? () => onRowClick(row) : undefined} className={onRowClick ? 'clickable' : undefined}>
-                  {columns.map(c => <td key={c.key}>{c.render(row)}</td>)}
+                  {columns.map(c => <td key={c.key} data-label={c.header}>{c.render(row)}</td>)}
                 </tr>
               ))}
             </tbody>

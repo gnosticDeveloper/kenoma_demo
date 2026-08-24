@@ -21,8 +21,9 @@ import { clearSession } from './session'
 import { buildSeed } from './seed'
 import { LANG_KEY } from '../i18n'
 import type { DemoLang } from './presets'
+import { uid as genUid } from '../lib/uid'
 
-const DB_KEY = 'kenoma-demo-db-v6'
+const DB_KEY = 'kenoma-demo-db-v12'
 
 export function currentLang(): DemoLang {
   return localStorage.getItem(LANG_KEY) === 'es' ? 'es' : 'en'
@@ -88,7 +89,7 @@ export function resetDb(): void {
 }
 
 export function uid(): string {
-  return crypto.randomUUID()
+  return genUid()
 }
 
 export function nowIso(): string {
