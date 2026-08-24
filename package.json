@@ -1,0 +1,25 @@
+{
+  "name": "kenoma_demo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Static, backend-free demo build of the Kenoma admin UI.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "i18next": "^26.3.6",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-i18next": "^17.0.11"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "typescript": "^5.7.2",
+    "vite": "^8.2.0"
+  }
+}
