@@ -51,10 +51,10 @@ export default function BimeUnitsPage({ token, permissions }: Props) {
     { key: 'name', wide: true, header: t('bimeUnitsPage.name'), render: u => u.name, sortValue: u => u.name },
     {
       key: 'kind',
-      narrow: true,
+      align: 'center',
       header: t('bimeUnitsPage.kind'),
       render: u => (
-        <span className={`status-badge ${u.standard ? 'status-ok' : ''}`}>
+        <span className={`status-badge ${u.standard ? 'status-ok' : 'status-muted'}`}>
           {u.standard ? t('bimeUnitsPage.standard') : t('bimeUnitsPage.custom')}
         </span>
       ),

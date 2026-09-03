@@ -211,11 +211,11 @@ export default function BimeTransfersTab({
   // ── rendering ──
   const columns: Column<StockTransferResponse>[] = [
     { key: 'reference', header: t('bimeStockPage.transfers.reference'), render: tr => tr.reference || <span className="td-muted">{tr.id.slice(0, 8)}…</span> },
-    { key: 'status', narrow: true, header: t('bimeStockPage.transfers.status'), render: tr => <span className="role-badge">{t(`bimeStockPage.transfers.statuses.${tr.status}`)}</span> },
+    { key: 'status', header: t('bimeStockPage.transfers.status'), render: tr => <span className="role-badge">{t(`bimeStockPage.transfers.statuses.${tr.status}`)}</span> },
     { key: 'route', wide: true, header: t('bimeStockPage.transfers.route'), render: tr => (
       <span>{tr.sourceLocationId ? locationLabel(tr.sourceLocationId) : '—'} → {tr.destLocationId ? locationLabel(tr.destLocationId) : '—'}</span>
     ) },
-    { key: 'lines', narrow: true, header: t('bimeStockPage.transfers.lineCount'), render: tr => tr.lines.length },
+    { key: 'lines', header: t('bimeStockPage.transfers.lineCount'), render: tr => tr.lines.length },
     { key: 'created', header: t('bimeStockPage.created'), render: tr => <span className="td-muted">{new Date(tr.createdAt).toLocaleString()}</span> },
   ]
 

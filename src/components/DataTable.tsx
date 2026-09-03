@@ -8,10 +8,10 @@ export interface Column<T> {
   header: string
   render: (row: T) => ReactNode
   sortValue?: (row: T) => string | number
-  // Shrink this column to its content instead of letting it absorb the table's slack width.
-  narrow?: boolean
   // Let this column claim the table's slack width, so the rest size to their content.
   wide?: boolean
+  // Horizontal alignment of the header and cells for this column.
+  align?: 'left' | 'center' | 'right'
 }
 
 interface Props<T> {
@@ -23,8 +23,8 @@ interface Props<T> {
   onRowClick?: (row: T) => void
   emptyLabel: string
   headerAction?: ReactNode
-  // Deterministic column widths (table-layout: fixed): a `wide` column takes the slack,
-  // `narrow` columns are compact, the rest get a medium default.
+  // Deterministic column widths (table-layout: fixed): the `wide` column takes the
+  // slack, every other column gets a medium fixed width and wraps within it.
   fixed?: boolean
 }
 
@@ -78,7 +78,8 @@ export function DataTable<T>({ columns, rows, rowKey, searchable, searchText, on
                 {columns.map(c => (
                   <th
                     key={c.key}
-                    className={[c.sortValue && 'sortable', c.narrow && 'dt-narrow', c.wide && 'dt-wide'].filter(Boolean).join(' ') || undefined}
+                    className={[c.sortValue && 'sortable', c.wide && 'dt-wide'].filter(Boolean).join(' ') || undefined}
+                    style={c.align ? { textAlign: c.align } : undefined}
                     onClick={() => c.sortValue && toggleSort(c.key)}
                   >
                     {c.header}
@@ -90,7 +91,7 @@ export function DataTable<T>({ columns, rows, rowKey, searchable, searchText, on
             <tbody>
               {sorted.map(row => (
                 <tr key={rowKey(row)} onClick={onRowClick ? () => onRowClick(row) : undefined} className={onRowClick ? 'clickable' : undefined}>
-                  {columns.map(c => <td key={c.key} data-label={c.header} className={[c.narrow && 'dt-narrow', c.wide && 'dt-wide'].filter(Boolean).join(' ') || undefined}>{c.render(row)}</td>)}
+                  {columns.map(c => <td key={c.key} data-label={c.header} className={c.wide ? 'dt-wide' : undefined} style={c.align ? { textAlign: c.align } : undefined}>{c.render(row)}</td>)}
                 </tr>
               ))}
             </tbody>
