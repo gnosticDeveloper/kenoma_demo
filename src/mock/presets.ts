@@ -7,10 +7,57 @@ import type {
   ProductVariantResponse,
   StockBalanceResponse,
   StockMovementResponse,
+  VariantBarcodeResponse,
 } from '../types'
-import { nowIso, uid, type Db } from './db'
+import { nowIso, uid, type BatchRecord, type Db } from './db'
+
+// Deterministic-ish EAN-13 generator for demo seed barcodes. Uses the GS1
+// restricted-distribution prefix (02) so they never collide with real GTINs.
+let barcodeSeq = 1
+function nextEan13(): string {
+  const body = ('02' + String(barcodeSeq++).padStart(10, '0')).slice(0, 12)
+  let sum = 0
+  for (let i = 0; i < 12; i++) sum += Number(body[i]) * (i % 2 === 0 ? 1 : 3)
+  const check = (10 - (sum % 10)) % 10
+  return body + check
+}
+
+function seedPrimaryBarcode(db: Db, orgId: string, variant: ProductVariantResponse): void {
+  const row: VariantBarcodeResponse = {
+    id: uid(), orgId, variantId: variant.id, barcode: nextEan13(), symbology: 'EAN13',
+    source: 'PROVIDER', uom: variant.baseUom, factor: 1, isPrimary: true, createdAt: nowIso(),
+  }
+  db.barcodes.push(row)
+  variant.barcodes = [row]
+}
+
+// Splits a variant's on-hand stock into two lots (one near expiry, one comfortably out)
+// so the batch/expiry and FEFO features have data to show.
+function seedBatchesForVariant(db: Db, orgId: string, variant: ProductVariantResponse, seq: number): void {
+  const balances = db.stockBalances.filter(b => b.variantId === variant.id && b.quantity > 0)
+  if (balances.length === 0) return
+  const soon = new Date(Date.now() + 21 * 86_400_000).toISOString().slice(0, 10)
+  const later = new Date(Date.now() + 300 * 86_400_000).toISOString().slice(0, 10)
+  const lots: BatchRecord[] = [
+    {
+      id: uid(), orgId, variantId: variant.id, batchCode: `LOT-A-${String(seq).padStart(3, '0')}`,
+      expiryDate: soon, status: 'ACTIVE', recalledAt: null, recallNote: null, createdAt: nowIso(),
+      balances: balances.map(b => ({ locationId: b.locationId, quantity: Math.max(1, Math.floor(b.quantity * 0.4)) })),
+    },
+    {
+      id: uid(), orgId, variantId: variant.id, batchCode: `LOT-B-${String(seq).padStart(3, '0')}`,
+      expiryDate: later, status: 'ACTIVE', recalledAt: null, recallNote: null, createdAt: nowIso(),
+      balances: balances.map(b => ({ locationId: b.locationId, quantity: b.quantity - Math.max(1, Math.floor(b.quantity * 0.4)) })),
+    },
+  ]
+  db.batches.push(...lots)
+}
 
 export type DemoLang = 'en' | 'es'
+
+function optionCode(value: string): string {
+  return value.replace(/[^A-Za-z0-9]/g, '').slice(0, 4).toUpperCase() || 'OPT'
+}
 
 interface PresetBlueprint {
   locationNames: string[]
@@ -417,11 +464,16 @@ function seedStock(db: Db, orgId: string, productId: string, variantId: string, 
       variantId,
       locationId: location.id,
       movementType: 'INBOUND',
+      status: 'POSTED',
       delta: quantity,
+      uom: null,
+      uomQuantity: null,
       referenceId: null,
       note: 'Initial stock',
       createdAt: nowIso(),
       createdBy: 'system',
+      batchId: null,
+      allocations: null,
     }
     db.stockMovements.push(movement)
 
@@ -441,7 +493,7 @@ function seedElaborateCatalog(db: Db, orgId: string, bp: ElaborateBlueprint): vo
 
   function makeMetadata(name: string, values: string[]): ProductMetadataResponse {
     const m: ProductMetadataResponse = { id: uid(), orgId, name, options: [], createdAt: nowIso() }
-    m.options = values.map(value => ({ id: uid(), metadataId: m.id, value, createdAt: nowIso() }))
+    m.options = values.map(value => ({ id: uid(), metadataId: m.id, value, code: optionCode(value), createdAt: nowIso() }))
     db.metadata.push(m)
     return m
   }
@@ -456,6 +508,8 @@ function seedElaborateCatalog(db: Db, orgId: string, bp: ElaborateBlueprint): vo
   bp.items.forEach((item, idx) => {
     const productId = uid()
     const sharedOptions = sharedMeta.map(meta => optionFor(meta, item.shared[meta.name]))
+    // Make the first item batch-tracked so the batch/expiry/recall/FEFO features have data.
+    const tracksBatches = idx === 0
 
     const product: ProductResponse = {
       id: productId,
@@ -464,6 +518,7 @@ function seedElaborateCatalog(db: Db, orgId: string, bp: ElaborateBlueprint): vo
       name: item.name,
       description: item.description,
       isActive: true,
+      tracksBatches,
       createdAt: nowIso(),
       modifiedAt: nowIso(),
       metadata: null,
@@ -485,9 +540,16 @@ function seedElaborateCatalog(db: Db, orgId: string, bp: ElaborateBlueprint): vo
         stock: [],
         price: localizePrice(bp.priceBase + idx * bp.priceStepPerItem + i * bp.priceStepPerVariant, bp.currency),
         priceCurrency: bp.currency,
+        cost: localizePrice((bp.priceBase + idx * bp.priceStepPerItem + i * bp.priceStepPerVariant) * 0.55, bp.currency),
+        costCurrency: bp.currency,
+        baseUom: 'units',
+        uomConversions: [],
+        barcodes: [],
       }
       db.variants.push(variant)
       seedStock(db, orgId, productId, variantId, locations, idx, i)
+      seedPrimaryBarcode(db, orgId, variant)
+      if (tracksBatches) seedBatchesForVariant(db, orgId, variant, idx * 10 + i)
     })
   })
 }
@@ -505,7 +567,7 @@ export function seedBimeCatalog(db: Db, orgId: string, preset: BimePreset, lang:
     id: uid(),
     orgId,
     name: group.name,
-    options: group.options.map(value => ({ id: uid(), metadataId: '', value, createdAt: nowIso() })),
+    options: group.options.map(value => ({ id: uid(), metadataId: '', value, code: optionCode(value), createdAt: nowIso() })),
     createdAt: nowIso(),
   }))
   metadata.forEach(m => m.options.forEach(o => { o.metadataId = m.id }))
@@ -522,6 +584,7 @@ export function seedBimeCatalog(db: Db, orgId: string, preset: BimePreset, lang:
       name: p.name,
       description: p.description,
       isActive: true,
+      tracksBatches: false,
       createdAt: nowIso(),
       modifiedAt: nowIso(),
       metadata: null,
@@ -545,9 +608,15 @@ export function seedBimeCatalog(db: Db, orgId: string, preset: BimePreset, lang:
         stock: [],
         price: localizePrice(19.99 + idx * 5 + i * 2, bp.currency),
         priceCurrency: bp.currency,
+        cost: localizePrice((19.99 + idx * 5 + i * 2) * 0.55, bp.currency),
+        costCurrency: bp.currency,
+        baseUom: 'units',
+        uomConversions: [],
+        barcodes: [],
       }
       db.variants.push(variant)
       seedStock(db, orgId, productId, variantId, locations, idx, i)
+      seedPrimaryBarcode(db, orgId, variant)
     }
   })
 }

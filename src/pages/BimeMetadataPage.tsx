@@ -32,6 +32,7 @@ export default function BimeMetadataPage({ token, permissions }: Props) {
 
   const [optionTarget, setOptionTarget] = useState<ProductMetadataResponse | null>(null)
   const [optionValue, setOptionValue] = useState('')
+  const [optionCode, setOptionCode] = useState('')
   const addOption = useApiCall<unknown>()
   const removeOption = useApiCall<void>()
   const deleteCall = useApiCall<void>()
@@ -42,14 +43,17 @@ export default function BimeMetadataPage({ token, permissions }: Props) {
     setCreateName('')
     reload()
     toast.show(t('bimeMetadataPage.created'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [create.state])
 
   useEffect(() => {
     if (addOption.state.status !== 'success') return
     setOptionTarget(null)
     setOptionValue('')
+    setOptionCode('')
     reload()
     toast.show(t('bimeMetadataPage.optionAdded'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addOption.state])
 
   function removeOptionFrom(def: ProductMetadataResponse, optionId: string, value: string) {
@@ -81,7 +85,7 @@ export default function BimeMetadataPage({ token, permissions }: Props) {
         <div className="role-chips">
           {m.options.map(o => (
             <span key={o.id} className="role-badge">
-              {o.value}
+              {o.value} <span className="td-muted">({o.code})</span>
               {permissions.canManageBime && (
                 <button
                   type="button"
@@ -102,7 +106,7 @@ export default function BimeMetadataPage({ token, permissions }: Props) {
       header: '',
       render: (m: ProductMetadataResponse) => (
         <RowActionsMenu actions={[
-          { label: t('bimeMetadataPage.addOption'), onClick: () => { setOptionTarget(m); setOptionValue('') } },
+          { label: t('bimeMetadataPage.addOption'), onClick: () => { setOptionTarget(m); setOptionValue(''); setOptionCode('') } },
           { label: t('common.actions.delete'), onClick: () => remove(m), danger: true },
         ]} />
       ),
@@ -162,12 +166,25 @@ export default function BimeMetadataPage({ token, permissions }: Props) {
             <label>{t('bimeMetadataPage.optionValue')}</label>
             <input value={optionValue} onChange={e => setOptionValue(e.target.value)} placeholder="Red" />
           </div>
+          <div className="field">
+            <label>{t('bimeMetadataPage.optionCode')}</label>
+            <input
+              value={optionCode}
+              onChange={e => setOptionCode(e.target.value.toUpperCase())}
+              placeholder="RED"
+            />
+            <span className="panel-hint">{t('bimeMetadataPage.optionCodeHint')}</span>
+          </div>
         </div>
         <div className="actions">
           <button
             className="btn btn-primary"
             disabled={addOption.state.status === 'loading' || !optionValue.trim() || !optionTarget}
-            onClick={() => optionTarget && addOption.call(() => bime.metadata.addOption(optionTarget.id, { value: optionValue.trim() }, token))}
+            onClick={() => optionTarget && addOption.call(() => bime.metadata.addOption(
+              optionTarget.id,
+              { value: optionValue.trim(), code: optionCode.trim() || undefined },
+              token,
+            ))}
           >
             {addOption.state.status === 'loading' ? t('common.actions.loading') : t('common.actions.save')}
           </button>

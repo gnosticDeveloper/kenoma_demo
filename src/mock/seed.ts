@@ -1,7 +1,17 @@
-import type { OrgResponse } from '../types'
+import type { OrgResponse, OrgUnitResponse } from '../types'
 import type { Db, StoredUser } from './db'
-import { uid } from './db'
+import { nowIso, uid } from './db'
 import { seedBimeCatalog, type DemoLang } from './presets'
+
+// Built-in metric units plus the generic count unit, mirroring the backend's standard set.
+const STANDARD_UNITS = ['units', 'kg', 'g', 'm', 'cm', 'l', 'ml']
+
+function seedUnits(db: Db, orgId: string): void {
+  const rows: OrgUnitResponse[] = STANDARD_UNITS.map(name => ({
+    id: uid(), orgId, name, standard: true, createdAt: nowIso(),
+  }))
+  db.units.push(...rows)
+}
 
 interface ShopBlueprint {
   orgName: string
@@ -46,6 +56,14 @@ export function buildSeed(lang: DemoLang): Db {
     stockMovements: [],
     stockBalances: [],
     alertThresholds: [],
+    units: [],
+    uomConversions: [],
+    barcodes: [],
+    batches: [],
+    transfers: [],
+    sales: [],
+    orgBarcodeSettings: [],
+    orgBatchSettings: [],
   }
 
   for (const shop of SHOPS_BY_LANG[lang]) {
@@ -60,6 +78,7 @@ export function buildSeed(lang: DemoLang): Db {
       roles: { [bimeSvcId]: ['BIME_ADMIN'] },
     })
 
+    seedUnits(db, orgId)
     seedBimeCatalog(db, orgId, shop.preset, lang)
   }
 

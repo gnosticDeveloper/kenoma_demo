@@ -1,7 +1,7 @@
 {
   "name": "kenoma_demo",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Static, backend-free demo build of the Kenoma admin UI.",
   "type": "module",
   "scripts": {
