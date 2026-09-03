@@ -312,23 +312,8 @@ export const raum = {
       requireRole(token, 'RAUM_ADMIN')
       return { orgId: dto.orgId, serviceId: dto.serviceId }
     },
-    ephemeral: async (dto: BasicCredential, token: string): Promise<Credentials> => {
-      await delay()
-      requireRole(token, 'RAUM_ADMIN')
-      const service = getDb().services.find(s => s.id === dto.serviceId)
-      return {
-        orgId: dto.orgId,
-        serviceId: dto.serviceId,
-        userName: `demo_${(service?.name ?? 'svc').toLowerCase()}_${uid().slice(0, 8)}`,
-        password: uid().replace(/-/g, '').slice(0, 20),
-        dbHost: `pg-${(service?.name ?? 'svc').toLowerCase()}.internal`,
-        dbPort: 5432,
-        dbName: (service?.name ?? 'service').toLowerCase(),
-        dbEngine: 'postgresql',
-        leaseId: uid(),
-        leaseDuration: 3600,
-      }
-    },
+    // /credentials/ephemeral is service-to-service only and is not exposed at the
+    // public gateway — there is no browser client for it.
   },
   onboarding: {
     initiate: async (orgId: string, dto: OnboardingRequest, token: string): Promise<void> => {

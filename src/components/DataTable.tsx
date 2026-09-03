@@ -1,12 +1,17 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SearchIcon } from './icons'
+import { tokenizedMatch } from '../lib/search'
 
 export interface Column<T> {
   key: string
   header: string
   render: (row: T) => ReactNode
   sortValue?: (row: T) => string | number
+  // Shrink this column to its content instead of letting it absorb the table's slack width.
+  narrow?: boolean
+  // Let this column claim the table's slack width, so the rest size to their content.
+  wide?: boolean
 }
 
 interface Props<T> {
@@ -18,17 +23,19 @@ interface Props<T> {
   onRowClick?: (row: T) => void
   emptyLabel: string
   headerAction?: ReactNode
+  // Deterministic column widths (table-layout: fixed): a `wide` column takes the slack,
+  // `narrow` columns are compact, the rest get a medium default.
+  fixed?: boolean
 }
 
-export function DataTable<T>({ columns, rows, rowKey, searchable, searchText, onRowClick, emptyLabel, headerAction }: Props<T>) {
+export function DataTable<T>({ columns, rows, rowKey, searchable, searchText, onRowClick, emptyLabel, headerAction, fixed }: Props<T>) {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null)
 
   const filtered = useMemo(() => {
     if (!search.trim() || !searchText) return rows
-    const q = search.trim().toLowerCase()
-    return rows.filter(r => searchText(r).toLowerCase().includes(q))
+    return rows.filter(r => tokenizedMatch(search, searchText(r)))
   }, [rows, search, searchText])
 
   const sorted = useMemo(() => {
@@ -65,13 +72,13 @@ export function DataTable<T>({ columns, rows, rowKey, searchable, searchText, on
         <div className="empty-state">{emptyLabel}</div>
       ) : (
         <div className="data-table-scroll">
-          <table className="data-table">
+          <table className={fixed ? 'data-table data-table-fixed' : 'data-table'}>
             <thead>
               <tr>
                 {columns.map(c => (
                   <th
                     key={c.key}
-                    className={c.sortValue ? 'sortable' : undefined}
+                    className={[c.sortValue && 'sortable', c.narrow && 'dt-narrow', c.wide && 'dt-wide'].filter(Boolean).join(' ') || undefined}
                     onClick={() => c.sortValue && toggleSort(c.key)}
                   >
                     {c.header}
@@ -83,7 +90,7 @@ export function DataTable<T>({ columns, rows, rowKey, searchable, searchText, on
             <tbody>
               {sorted.map(row => (
                 <tr key={rowKey(row)} onClick={onRowClick ? () => onRowClick(row) : undefined} className={onRowClick ? 'clickable' : undefined}>
-                  {columns.map(c => <td key={c.key} data-label={c.header}>{c.render(row)}</td>)}
+                  {columns.map(c => <td key={c.key} data-label={c.header} className={[c.narrow && 'dt-narrow', c.wide && 'dt-wide'].filter(Boolean).join(' ') || undefined}>{c.render(row)}</td>)}
                 </tr>
               ))}
             </tbody>

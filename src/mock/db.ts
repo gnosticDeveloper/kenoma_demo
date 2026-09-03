@@ -1,5 +1,6 @@
 import type {
   BasePricingResponse,
+  BatchStatus,
   BillingHistoryResponse,
   DrBackupResponse,
   ExchangeRateResponse,
@@ -7,15 +8,22 @@ import type {
   ExportLayout,
   LocationResponse,
   ModulePricingResponse,
+  OrgBarcodeSettingsResponse,
+  OrgBatchSettingsResponse,
   OrgResponse,
+  OrgUnitResponse,
   ProductMetadataResponse,
   ProductResponse,
   ProductVariantResponse,
+  SaleResponse,
   ServiceResponse,
   StockAlertThresholdResponse,
   StockBalanceResponse,
   StockMovementResponse,
+  StockTransferResponse,
+  UomConversionResponse,
   UserResponse,
+  VariantBarcodeResponse,
 } from '../types'
 import { clearSession } from './session'
 import { buildSeed } from './seed'
@@ -23,7 +31,7 @@ import { LANG_KEY } from '../i18n'
 import type { DemoLang } from './presets'
 import { uid as genUid } from '../lib/uid'
 
-const DB_KEY = 'kenoma-demo-db-v12'
+const DB_KEY = 'kenoma-demo-db-v14'
 
 export function currentLang(): DemoLang {
   return localStorage.getItem(LANG_KEY) === 'es' ? 'es' : 'en'
@@ -40,6 +48,21 @@ export interface ExportJobRecord {
   format: ExportFormat
   layout: ExportLayout
   requestedAtMs: number
+}
+
+// Production batch / lot. Per-location quantities are tracked here; the API response
+// (BatchResponse) is derived from `balances` + `totalQuantity` on read.
+export interface BatchRecord {
+  id: string
+  orgId: string
+  variantId: string
+  batchCode: string
+  expiryDate: string | null
+  status: BatchStatus
+  recalledAt: string | null
+  recallNote: string | null
+  createdAt: string
+  balances: { locationId: string; quantity: number }[]
 }
 
 export interface Db {
@@ -59,6 +82,14 @@ export interface Db {
   stockMovements: StockMovementResponse[]
   stockBalances: StockBalanceResponse[]
   alertThresholds: StockAlertThresholdResponse[]
+  units: OrgUnitResponse[]
+  uomConversions: UomConversionResponse[]
+  barcodes: VariantBarcodeResponse[]
+  batches: BatchRecord[]
+  transfers: StockTransferResponse[]
+  sales: SaleResponse[]
+  orgBarcodeSettings: OrgBarcodeSettingsResponse[]
+  orgBatchSettings: OrgBatchSettingsResponse[]
 }
 
 let cached: Db | null = null

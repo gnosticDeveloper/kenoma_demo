@@ -1,0 +1,13 @@
+{
+  // Static-assets-only Worker: the dashboard deploy command runs
+  // `npx wrangler versions upload`, which needs this file to know that
+  // ./dist is a directory of assets (no Worker script entry-point).
+  "name": "kenoma-demo",
+  "compatibility_date": "2026-08-31",
+  "assets": {
+    "directory": "./dist",
+    // Client-side routing: serve index.html for unknown paths so deep
+    // links like /<orgId>/bime-products resolve on refresh.
+    "not_found_handling": "single-page-application"
+  }
+}
