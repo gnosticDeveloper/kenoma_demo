@@ -543,32 +543,34 @@ export default function BimeSalesPage({ token, permissions }: Props) {
             <p className="panel-hint">
               {t('bimeSalesPage.soldAt')}: {new Date(receipt.soldAt).toLocaleString(locale)} · {locationLabel(receipt.locationId)}
             </p>
-            <table className="mini-table">
-              <thead>
-                <tr>
-                  <th>{t('bimeSalesPage.item')}</th>
-                  <th className="num">{t('bimeSalesPage.qty')}</th>
-                  <th className="num">{t('bimeSalesPage.unitPrice')}</th>
-                  <th className="num">{t('bimeSalesPage.lineTotal')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {receipt.lines.map(l => (
-                  <tr key={l.id}>
-                    <td>{variantLabel(l.variantId)}{l.uom ? ` · ${l.uom}` : ''}</td>
-                    <td className="num">{l.uom && l.uomQuantity != null ? l.uomQuantity : l.qtyBase}</td>
-                    <td className="num">{formatMoney(l.unitPrice, receipt.currency ?? '', locale)}</td>
-                    <td className="num">{formatMoney(l.lineTotal, receipt.currency ?? '', locale)}</td>
+            <div className="mini-table-wrap">
+              <table className="mini-table">
+                <thead>
+                  <tr>
+                    <th>{t('bimeSalesPage.item')}</th>
+                    <th className="num">{t('bimeSalesPage.qty')}</th>
+                    <th className="num">{t('bimeSalesPage.unitPrice')}</th>
+                    <th className="num">{t('bimeSalesPage.lineTotal')}</th>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan={3}><strong>{t('bimeSalesPage.subtotal')}</strong></td>
-                  <td className="num"><strong>{formatMoney(receipt.subtotal, receipt.currency ?? '', locale)}</strong></td>
-                </tr>
-              </tfoot>
-            </table>
+                </thead>
+                <tbody>
+                  {receipt.lines.map(l => (
+                    <tr key={l.id}>
+                      <td>{variantLabel(l.variantId)}{l.uom ? ` · ${l.uom}` : ''}</td>
+                      <td className="num">{l.uom && l.uomQuantity != null ? l.uomQuantity : l.qtyBase}</td>
+                      <td className="num">{formatMoney(l.unitPrice, receipt.currency ?? '', locale)}</td>
+                      <td className="num">{formatMoney(l.lineTotal, receipt.currency ?? '', locale)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={3}><strong>{t('bimeSalesPage.subtotal')}</strong></td>
+                    <td className="num"><strong>{formatMoney(receipt.subtotal, receipt.currency ?? '', locale)}</strong></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
             <div className="actions" style={{ marginTop: 14 }}>
               <button className="btn btn-primary" type="button" disabled={printing}
                 onClick={() => receipt && printTicket(receipt)}>

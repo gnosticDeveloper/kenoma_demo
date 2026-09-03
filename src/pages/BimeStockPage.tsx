@@ -365,7 +365,7 @@ export default function BimeStockPage({ token, permissions }: Props) {
   const locateTotal = locateHit ? locateHit.variant.stock.reduce((n, s) => n + s.quantity, 0) : 0
 
   const movementColumns: Column<StockMovementResponse>[] = [
-    { key: 'type', header: t('bimeStockPage.type'), render: m => <span className="role-badge">{t(`bimeStockPage.movementTypes.${m.movementType}`)}</span> },
+    { key: 'type', narrow: true, header: t('bimeStockPage.type'), render: m => <span className="role-badge">{t(`bimeStockPage.movementTypes.${m.movementType}`)}</span> },
     {
       key: 'delta',
       header: t('bimeStockPage.delta'),
@@ -378,21 +378,21 @@ export default function BimeStockPage({ token, permissions }: Props) {
         </span>
       ),
     },
-    { key: 'variant', header: t('bimeStockPage.variant'), render: m => variantLabel(m.variantId) },
+    { key: 'variant', wide: true, header: t('bimeStockPage.variant'), render: m => variantLabel(m.variantId) },
     { key: 'location', header: t('bimeStockPage.location'), render: m => locationLabel(m.locationId) },
     { key: 'note', header: t('bimeStockPage.note'), render: m => <span className="td-muted">{m.note ?? '—'}</span> },
     { key: 'created', header: t('bimeStockPage.created'), render: m => <span className="td-muted">{new Date(m.createdAt).toLocaleString()}</span> },
   ]
 
   const balanceColumns: Column<StockBalanceResponse>[] = [
-    { key: 'variant', header: t('bimeStockPage.variant'), render: b => variantLabel(b.variantId) },
+    { key: 'variant', wide: true, header: t('bimeStockPage.variant'), render: b => variantLabel(b.variantId) },
     { key: 'location', header: t('bimeStockPage.location'), render: b => locationLabel(b.locationId) },
     { key: 'quantity', header: t('bimeStockPage.quantity'), render: b => variantQuantityLabel(b.variantId, b.quantity) },
     { key: 'modified', header: t('bimeStockPage.modified'), render: b => <span className="td-muted">{new Date(b.modifiedAt).toLocaleString()}</span> },
   ]
 
   const thresholdColumns: Column<StockAlertThresholdResponse>[] = [
-    { key: 'variant', header: t('bimeStockPage.variant'), render: th => variantLabel(th.variantId) },
+    { key: 'variant', wide: true, header: t('bimeStockPage.variant'), render: th => variantLabel(th.variantId) },
     { key: 'location', header: t('bimeStockPage.location'), render: th => locationLabel(th.locationId) },
     { key: 'threshold', header: t('bimeStockPage.threshold'), render: th => variantQuantityLabel(th.variantId, th.threshold) },
     { key: 'modified', header: t('bimeStockPage.modified'), render: th => <span className="td-muted">{new Date(th.modifiedAt).toLocaleString()}</span> },
@@ -409,7 +409,7 @@ export default function BimeStockPage({ token, permissions }: Props) {
   ]
 
   const activeAlertColumns: Column<StockAlertResponse>[] = [
-    { key: 'variant', header: t('bimeStockPage.variant'), render: a => variantLabel(a.variantId) },
+    { key: 'variant', wide: true, header: t('bimeStockPage.variant'), render: a => variantLabel(a.variantId) },
     { key: 'location', header: t('bimeStockPage.location'), render: a => locationLabel(a.locationId) },
     { key: 'quantity', header: t('bimeStockPage.quantity'), render: a => <span className="feedback-error">{variantQuantityLabel(a.variantId, a.quantity)}</span> },
     { key: 'threshold', header: t('bimeStockPage.threshold'), render: a => variantQuantityLabel(a.variantId, a.threshold) },
@@ -540,6 +540,7 @@ export default function BimeStockPage({ token, permissions }: Props) {
             </div>
             {movements.state.status === 'error' && <Feedback state={movements.state} />}
             <DataTable
+          fixed
               columns={movementColumns}
               rows={filterByProduct(movements.state.status === 'success' ? movements.state.data : [], movFilterProduct)}
               rowKey={m => m.id}
@@ -574,6 +575,7 @@ export default function BimeStockPage({ token, permissions }: Props) {
             </div>
             {balances.state.status === 'error' && <Feedback state={balances.state} />}
             <DataTable
+          fixed
               columns={balanceColumns}
               rows={filterByProduct(balances.state.status === 'success' ? balances.state.data : [], balFilterProduct)}
               rowKey={b => `${b.variantId}-${b.locationId}`}
@@ -631,6 +633,7 @@ export default function BimeStockPage({ token, permissions }: Props) {
             </div>
             {thresholds.state.status === 'error' && <Feedback state={thresholds.state} />}
             <DataTable
+          fixed
               columns={thresholdColumns}
               rows={filterByProduct(thresholds.state.status === 'success' ? thresholds.state.data : [], thrFilterProduct)}
               rowKey={th => `${th.variantId}-${th.locationId}`}
@@ -666,6 +669,7 @@ export default function BimeStockPage({ token, permissions }: Props) {
             </div>
             {activeAlerts.state.status === 'error' && <Feedback state={activeAlerts.state} />}
             <DataTable
+          fixed
               columns={activeAlertColumns}
               rows={filterByProduct(activeAlerts.state.status === 'success' ? activeAlerts.state.data : [], alertFilterProduct)}
               rowKey={a => `${a.variantId}-${a.locationId}`}

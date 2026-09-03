@@ -531,6 +531,19 @@ button, input, select {
 .data-table th.sortable { cursor: pointer; user-select: none; }
 .sort-arrow { color: var(--color-accent); }
 .data-table td { padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--color-border-faint); vertical-align: middle; }
+/* Columns flagged `narrow` (movement type, transfer/batch status, unit kind) hug their
+   content so the table's slack width goes to the text columns instead. width:1px in an
+   auto-layout table resolves to the cell's min-content. */
+/* Compact tables (Stock, Transfers, Batches, Units): deterministic column widths.
+   `dt-wide` soaks the leftover; `dt-narrow` is for numbers/pills; the rest get a
+   medium default. Long text wraps within its column instead of stretching it.
+   Guarded above the mobile breakpoint so the ≤40em stacked-card table view wins. */
+@media (min-width: 40.0625em) {
+  .data-table-fixed { table-layout: fixed; }
+  .data-table-fixed th, .data-table-fixed td { width: 8.5rem; overflow-wrap: anywhere; }
+  .data-table-fixed th.dt-narrow, .data-table-fixed td.dt-narrow { width: 5rem; white-space: normal; }
+  .data-table-fixed th.dt-wide, .data-table-fixed td.dt-wide { width: auto; }
+}
 .data-table tr:last-child td { border-bottom: none; }
 .data-table tr.clickable { cursor: pointer; }
 .td-muted { color: var(--color-text-muted); font-size: 0.75rem; }
@@ -979,6 +992,16 @@ button, input, select {
   }
   .data-table tr.clickable:active { background: var(--color-accent-soft); }
   .data-table tr.clickable:active td { background: transparent; }
+  /* An action cell with more than one button (Batches: Report/Recall, Recent sales:
+     View/Print) can't sit in the card's top-right corner like the single ⋯ menu — it
+     overlaps the first field. Stack it as its own full-width row instead. */
+  .data-table td[data-label=""]:has(button + button) {
+    position: static;
+    width: 100%;
+    padding-top: 0.5rem;
+    justify-content: flex-end;
+  }
+  .data-table tr:has(td[data-label=""] button + button) { padding-right: 0.75rem; }
 }
 
 /* Hover styles only for devices with a real pointer — on touch devices
@@ -1600,11 +1623,11 @@ button, input, select {
   margin-bottom: 3px;
 }
 
+.mini-table-wrap { overflow-x: auto; margin-bottom: 14px; }
 .mini-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  margin-bottom: 14px;
 }
 .mini-table th,
 .mini-table td {

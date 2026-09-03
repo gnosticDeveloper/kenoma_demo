@@ -501,7 +501,8 @@
       "OUTBOUND": "Salida",
       "ADJUSTMENT": "Ajuste",
       "TRANSFER_OUT": "Traslado (salida)",
-      "TRANSFER_IN": "Traslado (entrada)"
+      "TRANSFER_IN": "Traslado (entrada)",
+      "SALE": "Venta"
     },
     "delta": "Delta",
     "unit": "Unidad",

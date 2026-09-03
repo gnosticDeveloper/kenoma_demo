@@ -211,11 +211,11 @@ export default function BimeTransfersTab({
   // ── rendering ──
   const columns: Column<StockTransferResponse>[] = [
     { key: 'reference', header: t('bimeStockPage.transfers.reference'), render: tr => tr.reference || <span className="td-muted">{tr.id.slice(0, 8)}…</span> },
-    { key: 'status', header: t('bimeStockPage.transfers.status'), render: tr => <span className="role-badge">{t(`bimeStockPage.transfers.statuses.${tr.status}`)}</span> },
-    { key: 'route', header: t('bimeStockPage.transfers.route'), render: tr => (
+    { key: 'status', narrow: true, header: t('bimeStockPage.transfers.status'), render: tr => <span className="role-badge">{t(`bimeStockPage.transfers.statuses.${tr.status}`)}</span> },
+    { key: 'route', wide: true, header: t('bimeStockPage.transfers.route'), render: tr => (
       <span>{tr.sourceLocationId ? locationLabel(tr.sourceLocationId) : '—'} → {tr.destLocationId ? locationLabel(tr.destLocationId) : '—'}</span>
     ) },
-    { key: 'lines', header: t('bimeStockPage.transfers.lineCount'), render: tr => tr.lines.length },
+    { key: 'lines', narrow: true, header: t('bimeStockPage.transfers.lineCount'), render: tr => tr.lines.length },
     { key: 'created', header: t('bimeStockPage.created'), render: tr => <span className="td-muted">{new Date(tr.createdAt).toLocaleString()}</span> },
   ]
 
@@ -245,6 +245,7 @@ export default function BimeTransfersTab({
 
       {list.state.status === 'error' && <Feedback state={list.state} />}
       <DataTable
+          fixed
         columns={columns}
         rows={rows}
         rowKey={tr => tr.id}
@@ -379,52 +380,53 @@ export default function BimeTransfersTab({
               {selected.completedAt && <div><span className="td-muted">{t('bimeStockPage.transfers.completedAt')}</span><div>{new Date(selected.completedAt).toLocaleString()}</div></div>}
             </div>
 
-            <table className="mini-table">
-              <thead>
-                <tr>
-                  <th>{t('bimeStockPage.variant')}</th>
-                  <th>{t('bimeStockPage.transfers.requested')}</th>
-                  <th>{t('bimeStockPage.transfers.dispatched')}</th>
-                  <th>{t('bimeStockPage.transfers.receivedOk')}</th>
-                  <th>{t('bimeStockPage.transfers.inTransitCol')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selected.lines.map(l => (
-                  <Fragment key={l.id}>
-                    <tr>
-                      <td>{variantLabel(l.variantId)}</td>
-                      <td>{variantQuantityLabel(l.variantId, l.qtyRequested)}</td>
-                      <td>{variantQuantityLabel(l.variantId, l.qtyDispatched)}</td>
-                      <td>{variantQuantityLabel(l.variantId, l.qtyReceived)}</td>
-                      <td>{l.qtyInTransit > 0 ? variantQuantityLabel(l.variantId, l.qtyInTransit) : '—'}</td>
-                    </tr>
-                    {l.batches && l.batches.length > 0 && (
-                      <tr className="transfer-line-lots">
-                        <td colSpan={5}>
-                          <div className="lot-note">{t('bimeStockPage.transfers.lots')}</div>
-                          <table className="lot-subtable">
-                            <thead>
-                              <tr>
-                                <th>{t('bimeBatchesTab.code')}</th>
-                                <th>{t('bimeBatchesTab.expiry')}</th>
-                                <th className="num">{t('bimeStockPage.transfers.dispatched')}</th>
-                                <th className="num">{t('bimeStockPage.transfers.received')}</th>
-                                <th className="num">{t('bimeStockPage.transfers.inTransitCol')}</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {l.batches.map(b => (
-                                <tr key={b.batchId}>
-                                  <td>{b.batchCode}{b.status === 'RECALLED' ? ` (${t('bimeStockPage.transfers.lotRecalled')})` : ''}</td>
-                                  <td>{b.expiryDate ?? '—'}</td>
-                                  <td className="num">{variantQuantityLabel(l.variantId, b.qtyDispatched)}</td>
-                                  <td className="num">{variantQuantityLabel(l.variantId, b.qtyReceived)}</td>
-                                  <td className="num">{b.qtyInTransit > 0 ? variantQuantityLabel(l.variantId, b.qtyInTransit) : '—'}</td>
+            <div className="mini-table-wrap">
+              <table className="mini-table">
+                <thead>
+                  <tr>
+                    <th>{t('bimeStockPage.variant')}</th>
+                    <th>{t('bimeStockPage.transfers.requested')}</th>
+                    <th>{t('bimeStockPage.transfers.dispatched')}</th>
+                    <th>{t('bimeStockPage.transfers.receivedOk')}</th>
+                    <th>{t('bimeStockPage.transfers.inTransitCol')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selected.lines.map(l => (
+                    <Fragment key={l.id}>
+                      <tr>
+                        <td>{variantLabel(l.variantId)}</td>
+                        <td>{variantQuantityLabel(l.variantId, l.qtyRequested)}</td>
+                        <td>{variantQuantityLabel(l.variantId, l.qtyDispatched)}</td>
+                        <td>{variantQuantityLabel(l.variantId, l.qtyReceived)}</td>
+                        <td>{l.qtyInTransit > 0 ? variantQuantityLabel(l.variantId, l.qtyInTransit) : '—'}</td>
+                      </tr>
+                      {l.batches && l.batches.length > 0 && (
+                        <tr className="transfer-line-lots">
+                          <td colSpan={5}>
+                            <div className="lot-note">{t('bimeStockPage.transfers.lots')}</div>
+                            <table className="lot-subtable">
+                              <thead>
+                                <tr>
+                                  <th>{t('bimeBatchesTab.code')}</th>
+                                  <th>{t('bimeBatchesTab.expiry')}</th>
+                                  <th className="num">{t('bimeStockPage.transfers.dispatched')}</th>
+                                  <th className="num">{t('bimeStockPage.transfers.received')}</th>
+                                  <th className="num">{t('bimeStockPage.transfers.inTransitCol')}</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {l.batches.map(b => (
+                                  <tr key={b.batchId}>
+                                    <td>{b.batchCode}{b.status === 'RECALLED' ? ` (${t('bimeStockPage.transfers.lotRecalled')})` : ''}</td>
+                                    <td>{b.expiryDate ?? '—'}</td>
+                                    <td className="num">{variantQuantityLabel(l.variantId, b.qtyDispatched)}</td>
+                                    <td className="num">{variantQuantityLabel(l.variantId, b.qtyReceived)}</td>
+                                    <td className="num">{b.qtyInTransit > 0 ? variantQuantityLabel(l.variantId, b.qtyInTransit) : '—'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                         </td>
                       </tr>
                     )}
@@ -432,6 +434,7 @@ export default function BimeTransfersTab({
                 ))}
               </tbody>
             </table>
+            </div>
 
             <div className="actions">
               {canManage && selected.status === 'DRAFT' && (
@@ -467,50 +470,51 @@ export default function BimeTransfersTab({
         {selected && (
           <div className="transfer-receive">
             <p className="panel-hint">{t('bimeStockPage.transfers.receiveHint')}</p>
-            <table className="mini-table">
-              <thead>
-                <tr>
-                  <th>{t('bimeStockPage.variant')}</th>
-                  <th className="num">{t('bimeStockPage.transfers.inTransitCol')}</th>
-                  <th className="num">{t('bimeStockPage.transfers.receiveNow')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selected.lines.map(l => {
-                  const outstanding = Math.max(0, l.qtyDispatched - l.qtyReceived)
-                  const lots = (l.batches ?? []).filter(b => b.qtyInTransit > 0)
-                  return (
-                    <Fragment key={l.id}>
-                      <tr>
-                        <td>{variantLabel(l.variantId)}</td>
-                        <td className="num">{variantQuantityLabel(l.variantId, outstanding)}</td>
-                        <td className="num">
-                          <input
-                            type="number"
-                            step="any"
-                            min={0}
-                            max={outstanding}
-                            value={receiveQty[l.id] ?? 0}
-                            disabled={outstanding === 0}
-                            onChange={e => setReceiveQty(q => ({ ...q, [l.id]: parseFloat(e.target.value) || 0 }))}
-                          />
-                        </td>
-                      </tr>
-                      {lots.length > 0 && (
-                        <tr className="transfer-line-lots">
-                          <td colSpan={3}>
-                            <div className="lot-note">{t('bimeStockPage.transfers.lotsInTransit')}</div>
-                            <table className="lot-subtable">
-                              <tbody>
-                                {lots.map(b => (
-                                  <tr key={b.batchId}>
-                                    <td>{b.batchCode}{b.status === 'RECALLED' ? ` (${t('bimeStockPage.transfers.lotRecalled')})` : ''}</td>
-                                    <td>{b.expiryDate ?? '—'}</td>
-                                    <td className="num">{variantQuantityLabel(l.variantId, b.qtyInTransit)}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+            <div className="mini-table-wrap">
+              <table className="mini-table">
+                <thead>
+                  <tr>
+                    <th>{t('bimeStockPage.variant')}</th>
+                    <th className="num">{t('bimeStockPage.transfers.inTransitCol')}</th>
+                    <th className="num">{t('bimeStockPage.transfers.receiveNow')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selected.lines.map(l => {
+                    const outstanding = Math.max(0, l.qtyDispatched - l.qtyReceived)
+                    const lots = (l.batches ?? []).filter(b => b.qtyInTransit > 0)
+                    return (
+                      <Fragment key={l.id}>
+                        <tr>
+                          <td>{variantLabel(l.variantId)}</td>
+                          <td className="num">{variantQuantityLabel(l.variantId, outstanding)}</td>
+                          <td className="num">
+                            <input
+                              type="number"
+                              step="any"
+                              min={0}
+                              max={outstanding}
+                              value={receiveQty[l.id] ?? 0}
+                              disabled={outstanding === 0}
+                              onChange={e => setReceiveQty(q => ({ ...q, [l.id]: parseFloat(e.target.value) || 0 }))}
+                            />
+                          </td>
+                        </tr>
+                        {lots.length > 0 && (
+                          <tr className="transfer-line-lots">
+                            <td colSpan={3}>
+                              <div className="lot-note">{t('bimeStockPage.transfers.lotsInTransit')}</div>
+                              <table className="lot-subtable">
+                                <tbody>
+                                  {lots.map(b => (
+                                    <tr key={b.batchId}>
+                                      <td>{b.batchCode}{b.status === 'RECALLED' ? ` (${t('bimeStockPage.transfers.lotRecalled')})` : ''}</td>
+                                      <td>{b.expiryDate ?? '—'}</td>
+                                      <td className="num">{variantQuantityLabel(l.variantId, b.qtyInTransit)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
                             <p className="panel-hint">{t('bimeStockPage.transfers.lotsFefoHint')}</p>
                           </td>
                         </tr>
@@ -520,6 +524,7 @@ export default function BimeTransfersTab({
                 })}
               </tbody>
             </table>
+            </div>
             <label className="transfer-close-short">
               <input type="checkbox" checked={closeShort} onChange={e => setCloseShort(e.target.checked)} />
               <span>{t('bimeStockPage.transfers.closeShort')}</span>

@@ -501,7 +501,8 @@
       "OUTBOUND": "Outbound",
       "ADJUSTMENT": "Adjustment",
       "TRANSFER_OUT": "Transfer out",
-      "TRANSFER_IN": "Transfer in"
+      "TRANSFER_IN": "Transfer in",
+      "SALE": "Sale"
     },
     "delta": "Delta",
     "unit": "Unit",

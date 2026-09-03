@@ -48,9 +48,10 @@ export default function BimeUnitsPage({ token, permissions }: Props) {
   }
 
   const columns: Column<OrgUnitResponse>[] = [
-    { key: 'name', header: t('bimeUnitsPage.name'), render: u => u.name, sortValue: u => u.name },
+    { key: 'name', wide: true, header: t('bimeUnitsPage.name'), render: u => u.name, sortValue: u => u.name },
     {
       key: 'kind',
+      narrow: true,
       header: t('bimeUnitsPage.kind'),
       render: u => (
         <span className={`status-badge ${u.standard ? 'status-ok' : ''}`}>
@@ -81,6 +82,7 @@ export default function BimeUnitsPage({ token, permissions }: Props) {
       <div className="panel">
         {list.state.status === 'error' && <Feedback state={list.state} />}
         <DataTable
+          fixed
           columns={columns}
           rows={units}
           rowKey={u => u.id}

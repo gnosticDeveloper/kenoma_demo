@@ -31,26 +31,74 @@ function seedPrimaryBarcode(db: Db, orgId: string, variant: ProductVariantRespon
   variant.barcodes = [row]
 }
 
-// Splits a variant's on-hand stock into two lots (one near expiry, one comfortably out)
-// so the batch/expiry and FEFO features have data to show.
-function seedBatchesForVariant(db: Db, orgId: string, variant: ProductVariantResponse, seq: number): void {
+interface LotSpec {
+  code: string
+  // days from now; null = no expiry date on the lot
+  expiryDays: number | null
+  // share of on-hand stock that lands in this lot (the last spec absorbs the remainder)
+  frac: number
+}
+
+// Durable goods: one lot due soon, one comfortably out.
+const DEFAULT_LOT_SPECS: LotSpec[] = [
+  { code: 'LOT-A', expiryDays: 21, frac: 0.4 },
+  { code: 'LOT-B', expiryDays: 300, frac: 0.6 },
+]
+
+// Perishables: a use-first lot right at the edge, a mid lot, and fresher stock.
+const PERISHABLE_LOT_SPECS: LotSpec[] = [
+  { code: 'LOT-A', expiryDays: 4, frac: 0.25 },
+  { code: 'LOT-B', expiryDays: 12, frac: 0.4 },
+  { code: 'LOT-C', expiryDays: 45, frac: 0.35 },
+]
+
+// Split a whole-number balance across lots by fraction, exactly (remainder to the last lot).
+function splitBalance(total: number, fracs: number[]): number[] {
+  const out = fracs.map(f => Math.max(0, Math.floor(total * f)))
+  const used = out.reduce((a, c) => a + c, 0)
+  if (used === 0 && total > 0) {
+    out[0] = total
+  } else {
+    out[out.length - 1] += total - used
+  }
+  let deficit = out[out.length - 1] < 0 ? -out[out.length - 1] : 0
+  if (deficit > 0) {
+    out[out.length - 1] = 0
+    for (let i = out.length - 2; i >= 0 && deficit > 0; i--) {
+      const take = Math.min(out[i], deficit)
+      out[i] -= take
+      deficit -= take
+    }
+  }
+  return out
+}
+
+// Splits a variant's on-hand stock into production lots so the batch/expiry,
+// FEFO, near-expiry-alert and recall features have data to show.
+function seedBatchesForVariant(
+  db: Db, orgId: string, variant: ProductVariantResponse, seq: number,
+  specs: LotSpec[] = DEFAULT_LOT_SPECS,
+): void {
   const balances = db.stockBalances.filter(b => b.variantId === variant.id && b.quantity > 0)
   if (balances.length === 0) return
-  const soon = new Date(Date.now() + 21 * 86_400_000).toISOString().slice(0, 10)
-  const later = new Date(Date.now() + 300 * 86_400_000).toISOString().slice(0, 10)
-  const lots: BatchRecord[] = [
-    {
-      id: uid(), orgId, variantId: variant.id, batchCode: `LOT-A-${String(seq).padStart(3, '0')}`,
-      expiryDate: soon, status: 'ACTIVE', recalledAt: null, recallNote: null, createdAt: nowIso(),
-      balances: balances.map(b => ({ locationId: b.locationId, quantity: Math.max(1, Math.floor(b.quantity * 0.4)) })),
-    },
-    {
-      id: uid(), orgId, variantId: variant.id, batchCode: `LOT-B-${String(seq).padStart(3, '0')}`,
-      expiryDate: later, status: 'ACTIVE', recalledAt: null, recallNote: null, createdAt: nowIso(),
-      balances: balances.map(b => ({ locationId: b.locationId, quantity: b.quantity - Math.max(1, Math.floor(b.quantity * 0.4)) })),
-    },
-  ]
-  db.batches.push(...lots)
+  const fracs = specs.map(sp => sp.frac)
+  const lots: BatchRecord[] = specs.map(spec => ({
+    id: uid(), orgId, variantId: variant.id,
+    batchCode: `${spec.code}-${String(seq).padStart(3, '0')}`,
+    expiryDate: spec.expiryDays == null
+      ? null
+      : new Date(Date.now() + spec.expiryDays * 86_400_000).toISOString().slice(0, 10),
+    status: 'ACTIVE',
+    recalledAt: null, recallNote: null, createdAt: nowIso(),
+    balances: [] as { locationId: string; quantity: number }[],
+  }))
+  for (const b of balances) {
+    const parts = splitBalance(b.quantity, fracs)
+    lots.forEach((lot, li) => {
+      if (parts[li] > 0) lot.balances.push({ locationId: b.locationId, quantity: parts[li] })
+    })
+  }
+  db.batches.push(...lots.filter(l => l.balances.length > 0))
 }
 
 export type DemoLang = 'en' | 'es'
@@ -131,6 +179,11 @@ interface ElaborateBlueprint {
   priceBase: number
   priceStepPerItem: number
   priceStepPerVariant: number
+  // Perishable catalogue: every product tracks batches, seeded with the
+  // near-edge PERISHABLE_LOT_SPECS instead of the durable-goods default.
+  perishable?: boolean
+  // Mark one seeded lot (the mid "LOT-B" of items[itemIndex]) recalled, with this note.
+  recall?: { itemIndex: number; note: string }
 }
 
 const EN_BOOKS: ElaborateBlueprint = {
@@ -425,9 +478,119 @@ const ES_REPAIR: ElaborateBlueprint = {
   ],
 }
 
-const ELABORATE_BLUEPRINTS: Record<DemoLang, Record<'BOOK_STORE' | 'CLOTHING_STORE' | 'REPAIR_SHOP', ElaborateBlueprint>> = {
-  en: { BOOK_STORE: EN_BOOKS, CLOTHING_STORE: EN_CLOTHING, REPAIR_SHOP: EN_REPAIR },
-  es: { BOOK_STORE: ES_BOOKS, CLOTHING_STORE: ES_CLOTHING, REPAIR_SHOP: ES_REPAIR },
+const EN_GROCERY: ElaborateBlueprint = {
+  locationNames: ['Market Floor', 'Cold Store'],
+  currency: 'USD',
+  perishable: true,
+  recall: { itemIndex: 4, note: 'Supplier recall notice: this production lot may be contaminated with Listeria monocytogenes. Pull all remaining units from sale and quarantine pending destruction.' },
+  variantAxis: { name: 'Pack Size', options: ['Single', 'Family'] },
+  sharedGroups: [
+    { name: 'Category', options: ['Dairy', 'Bakery', 'Eggs', 'Beverages', 'Meat'] },
+    { name: 'Brand', options: ['Meadowlark', 'Pastoral Co.', 'Sunhaven', 'Golden Crust'] },
+    { name: 'Supplier', options: ['Valley Fresh Distribution', 'Harbor Foods', 'Greenfield Farms'] },
+    { name: 'Storage', options: ['Refrigerated', 'Ambient', 'Frozen'] },
+  ],
+  priceBase: 3.49,
+  priceStepPerItem: 1.2,
+  priceStepPerVariant: 2.4,
+  items: [
+    {
+      sku: 'GRO-001', name: 'Whole Milk',
+      description: 'Pasteurised whole cow\u2019s milk, 3.5% fat. Keep refrigerated; best within 7 days of opening.',
+      shared: { Category: 'Dairy', Brand: 'Meadowlark', Supplier: 'Valley Fresh Distribution', Storage: 'Refrigerated' },
+    },
+    {
+      sku: 'GRO-002', name: 'Greek-Style Yogurt',
+      description: 'Strained natural yogurt, unsweetened, live cultures. Refrigerated shelf life about three weeks.',
+      shared: { Category: 'Dairy', Brand: 'Pastoral Co.', Supplier: 'Valley Fresh Distribution', Storage: 'Refrigerated' },
+    },
+    {
+      sku: 'GRO-003', name: 'Free-Range Eggs',
+      description: 'Grade A large free-range hen eggs. Sold by the half-dozen or the dozen.',
+      shared: { Category: 'Eggs', Brand: 'Sunhaven', Supplier: 'Greenfield Farms', Storage: 'Refrigerated' },
+    },
+    {
+      sku: 'GRO-004', name: 'Sourdough Loaf',
+      description: 'Naturally leavened sourdough, baked daily. No preservatives; eat within three days.',
+      shared: { Category: 'Bakery', Brand: 'Golden Crust', Supplier: 'Harbor Foods', Storage: 'Ambient' },
+    },
+    {
+      sku: 'GRO-005', name: 'Brie-Style Soft Cheese',
+      description: 'Bloomy-rind soft cheese made from pasteurised milk. Ripens in the fridge; serve at room temperature.',
+      shared: { Category: 'Dairy', Brand: 'Pastoral Co.', Supplier: 'Harbor Foods', Storage: 'Refrigerated' },
+    },
+    {
+      sku: 'GRO-006', name: 'Fresh Orange Juice',
+      description: 'Not-from-concentrate squeezed orange juice, pasteurised. Keep cold; shake before serving.',
+      shared: { Category: 'Beverages', Brand: 'Sunhaven', Supplier: 'Valley Fresh Distribution', Storage: 'Refrigerated' },
+    },
+    {
+      sku: 'GRO-007', name: 'Chicken Breast Fillets',
+      description: 'Boneless skinless chicken breast fillets, individually quick-frozen. Cook from frozen or thaw in the fridge.',
+      shared: { Category: 'Meat', Brand: 'Meadowlark', Supplier: 'Greenfield Farms', Storage: 'Frozen' },
+    },
+  ],
+}
+
+const ES_GROCERY: ElaborateBlueprint = {
+  locationNames: ['Sal\u00f3n de Ventas', 'C\u00e1mara Fr\u00eda'],
+  currency: 'ARS',
+  perishable: true,
+  recall: { itemIndex: 4, note: 'Aviso de retiro del proveedor: este lote de producción podría estar contaminado con Listeria monocytogenes. Retirar de la venta todas las unidades y ponerlas en cuarentena hasta su destrucción.' },
+  variantAxis: { name: 'Tama\u00f1o', options: ['Individual', 'Familiar'] },
+  sharedGroups: [
+    { name: 'Categor\u00eda', options: ['L\u00e1cteos', 'Panader\u00eda', 'Huevos', 'Bebidas', 'Carnes'] },
+    { name: 'Marca', options: ['Meadowlark', 'Pastoral Co.', 'Sunhaven', 'Golden Crust'] },
+    { name: 'Proveedor', options: ['Distribuidora Valle Fresco', 'Alimentos del Puerto', 'Granjas Campoverde'] },
+    { name: 'Conservaci\u00f3n', options: ['Refrigerado', 'Ambiente', 'Congelado'] },
+  ],
+  priceBase: 3.49,
+  priceStepPerItem: 1.2,
+  priceStepPerVariant: 2.4,
+  items: [
+    {
+      sku: 'GRO-001', name: 'Leche Entera',
+      description: 'Leche de vaca entera pasteurizada, 3,5% de grasa. Mantener refrigerada; consumir dentro de los 7 d\u00edas de abierta.',
+      shared: { 'Categor\u00eda': 'L\u00e1cteos', Marca: 'Meadowlark', Proveedor: 'Distribuidora Valle Fresco', 'Conservaci\u00f3n': 'Refrigerado' },
+    },
+    {
+      sku: 'GRO-002', name: 'Yogur Griego',
+      description: 'Yogur natural colado, sin az\u00facar, con cultivos vivos. Vida \u00fatil refrigerada de unas tres semanas.',
+      shared: { 'Categor\u00eda': 'L\u00e1cteos', Marca: 'Pastoral Co.', Proveedor: 'Distribuidora Valle Fresco', 'Conservaci\u00f3n': 'Refrigerado' },
+    },
+    {
+      sku: 'GRO-003', name: 'Huevos de Campo',
+      description: 'Huevos de gallina camperos, tama\u00f1o grande. Se venden por media docena o por docena.',
+      shared: { 'Categor\u00eda': 'Huevos', Marca: 'Sunhaven', Proveedor: 'Granjas Campoverde', 'Conservaci\u00f3n': 'Refrigerado' },
+    },
+    {
+      sku: 'GRO-004', name: 'Pan de Masa Madre',
+      description: 'Pan de fermentaci\u00f3n natural, horneado a diario. Sin conservantes; consumir dentro de los tres d\u00edas.',
+      shared: { 'Categor\u00eda': 'Panader\u00eda', Marca: 'Golden Crust', Proveedor: 'Alimentos del Puerto', 'Conservaci\u00f3n': 'Ambiente' },
+    },
+    {
+      sku: 'GRO-005', name: 'Queso Brie',
+      description: 'Queso blando de corteza florida elaborado con leche pasteurizada. Madura en la heladera; servir a temperatura ambiente.',
+      shared: { 'Categor\u00eda': 'L\u00e1cteos', Marca: 'Pastoral Co.', Proveedor: 'Alimentos del Puerto', 'Conservaci\u00f3n': 'Refrigerado' },
+    },
+    {
+      sku: 'GRO-006', name: 'Jugo de Naranja Exprimido',
+      description: 'Jugo de naranja exprimido, no de concentrado, pasteurizado. Mantener fr\u00edo; agitar antes de servir.',
+      shared: { 'Categor\u00eda': 'Bebidas', Marca: 'Sunhaven', Proveedor: 'Distribuidora Valle Fresco', 'Conservaci\u00f3n': 'Refrigerado' },
+    },
+    {
+      sku: 'GRO-007', name: 'Suprema de Pollo',
+      description: 'Supremas de pollo sin piel ni hueso, congeladas individualmente. Cocinar congeladas o descongelar en la heladera.',
+      shared: { 'Categor\u00eda': 'Carnes', Marca: 'Meadowlark', Proveedor: 'Granjas Campoverde', 'Conservaci\u00f3n': 'Congelado' },
+    },
+  ],
+}
+
+export type ElaboratePreset = 'BOOK_STORE' | 'CLOTHING_STORE' | 'REPAIR_SHOP' | 'GROCERY_STORE'
+
+const ELABORATE_BLUEPRINTS: Record<DemoLang, Record<ElaboratePreset, ElaborateBlueprint>> = {
+  en: { BOOK_STORE: EN_BOOKS, CLOTHING_STORE: EN_CLOTHING, REPAIR_SHOP: EN_REPAIR, GROCERY_STORE: EN_GROCERY },
+  es: { BOOK_STORE: ES_BOOKS, CLOTHING_STORE: ES_CLOTHING, REPAIR_SHOP: ES_REPAIR, GROCERY_STORE: ES_GROCERY },
 }
 
 function seedLocations(db: Db, orgId: string, locationNames: string[]): LocationResponse[] {
@@ -505,11 +668,14 @@ function seedElaborateCatalog(db: Db, orgId: string, bp: ElaborateBlueprint): vo
     return meta.options.find(o => o.value === value)!
   }
 
+  const perishable = !!bp.perishable
+
   bp.items.forEach((item, idx) => {
     const productId = uid()
     const sharedOptions = sharedMeta.map(meta => optionFor(meta, item.shared[meta.name]))
-    // Make the first item batch-tracked so the batch/expiry/recall/FEFO features have data.
-    const tracksBatches = idx === 0
+    // A perishable catalogue tracks every product; otherwise just the first, so the
+    // batch/expiry/recall/FEFO features always have some data to show.
+    const tracksBatches = perishable || idx === 0
 
     const product: ProductResponse = {
       id: productId,
@@ -549,13 +715,28 @@ function seedElaborateCatalog(db: Db, orgId: string, bp: ElaborateBlueprint): vo
       db.variants.push(variant)
       seedStock(db, orgId, productId, variantId, locations, idx, i)
       seedPrimaryBarcode(db, orgId, variant)
-      if (tracksBatches) seedBatchesForVariant(db, orgId, variant, idx * 10 + i)
+      if (tracksBatches) {
+        seedBatchesForVariant(db, orgId, variant, idx * 10 + i, perishable ? PERISHABLE_LOT_SPECS : DEFAULT_LOT_SPECS)
+      }
     })
   })
+
+  if (bp.recall) {
+    const targetSku = bp.items[bp.recall.itemIndex]?.sku
+    const targetVariantIds = new Set(
+      db.variants.filter(v => db.products.find(p => p.id === v.productId)?.sku === targetSku).map(v => v.id),
+    )
+    const lot = db.batches.find(b => targetVariantIds.has(b.variantId) && b.batchCode.startsWith('LOT-B'))
+    if (lot) {
+      lot.status = 'RECALLED'
+      lot.recalledAt = nowIso()
+      lot.recallNote = bp.recall.note
+    }
+  }
 }
 
-export function seedBimeCatalog(db: Db, orgId: string, preset: BimePreset, lang: DemoLang): void {
-  if (preset === 'BOOK_STORE' || preset === 'CLOTHING_STORE' || preset === 'REPAIR_SHOP') {
+export function seedBimeCatalog(db: Db, orgId: string, preset: BimePreset | ElaboratePreset, lang: DemoLang): void {
+  if (preset === 'BOOK_STORE' || preset === 'CLOTHING_STORE' || preset === 'REPAIR_SHOP' || preset === 'GROCERY_STORE') {
     seedElaborateCatalog(db, orgId, ELABORATE_BLUEPRINTS[lang][preset])
     return
   }

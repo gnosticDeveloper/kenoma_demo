@@ -51,6 +51,8 @@ import type {
 import { delay, getDb, nowIso, persist, uid, type BatchRecord, type Db } from '../mock/db'
 import { requireClaims, requireRole, notFound } from '../mock/authz'
 import { ApiError } from './client'
+import { buildTextPdf } from '../lib/pdf'
+import { renderSaleTicket } from '../lib/saleTicketPdf'
 import { BIME_ROLES } from '../mock/roles'
 
 const VIEW_ROLES = ['BIME_ADMIN', 'BIME_STOCK_OPERATOR', 'BIME_CASHIER', 'BIME_TRANSFER_APPROVER', 'BIME_VIEWER']
@@ -66,10 +68,6 @@ function badRequest(message: string): never {
 
 function conflict(message: string): never {
   throw new ApiError(409, 'Conflict', message)
-}
-
-function textBlob(text: string, type: string): Blob {
-  return new Blob([text], { type })
 }
 
 function optionCode(value: string): string {
@@ -824,7 +822,7 @@ export const bime = {
           lines.push(`${v.sku ?? v.id}  ${b.barcode}  ${b.symbology}  ${b.uom}${b.factor && b.factor !== 1 ? ` ×${b.factor}` : ''}${b.isPrimary ? '  (primary)' : ''}`)
         }
       }
-      return textBlob(lines.join('\n') + '\n', 'application/pdf')
+      return buildTextPdf(lines)
     },
   },
 
@@ -1426,28 +1424,40 @@ export const bime = {
       persist()
       return sale
     },
-    ticketPdf: async (id: string, token: string, _lang?: string): Promise<Blob> => {
+    ticketPdf: async (id: string, token: string, lang?: string): Promise<Blob> => {
       await delay()
       const claims = requireRole(token, ...VIEW_ROLES)
       const db = getDb()
       const sale = db.sales.find(s => s.id === id && s.orgId === claims.orgId)
       if (!sale) notFound()
       const loc = db.locations.find(l => l.id === sale.locationId)
-      const lines = [
-        'Kenoma demo — sale ticket',
-        'NOT VALID AS A TAX RECEIPT',
-        '',
-        `Ref:      ${sale.reference ?? sale.id.slice(0, 8)}`,
-        `Sold at:  ${new Date(sale.soldAt).toLocaleString()}`,
-        `Location: ${loc ? `${loc.name} (${loc.code})` : sale.locationId}`,
-        '',
-      ]
-      for (const l of sale.lines) {
-        const v = db.variants.find(x => x.id === l.variantId)
-        lines.push(`${(v?.sku ?? l.variantId).padEnd(18)} ${String(l.uom && l.uomQuantity != null ? l.uomQuantity : l.qtyBase).padStart(5)}  ${String(l.unitPrice).padStart(9)}  ${String(l.lineTotal).padStart(10)}`)
-      }
-      lines.push('', `Subtotal: ${sale.subtotal} ${sale.currency ?? ''}`)
-      return textBlob(lines.join('\n') + '\n', 'application/pdf')
+      const org = db.orgs.find(o => o.id === claims.orgId)
+      const ticketLines = sale.lines.map(l => {
+        const variant = db.variants.find(v => v.id === l.variantId)
+        const product = variant ? db.products.find(p => p.id === variant.productId) : undefined
+        const opts = (variant?.options ?? []).map(o => o.value).sort().join(' / ')
+        const description = [product?.name ?? variant?.sku ?? l.variantId, opts].filter(Boolean).join(' ')
+        const pack = l.uom != null && l.uomQuantity != null
+        return {
+          description,
+          quantity: pack ? l.uomQuantity! : l.qtyBase,
+          unit: pack ? l.uom! : (variant?.baseUom ?? 'units'),
+          unitPrice: l.unitPrice,
+          lineTotal: l.lineTotal,
+        }
+      })
+      return renderSaleTicket({
+        companyName: org?.name ?? null,
+        locationName: loc?.name ?? null,
+        locationCode: loc?.code ?? null,
+        reference: sale.reference,
+        saleId: sale.id,
+        soldAt: sale.soldAt,
+        currency: sale.currency,
+        subtotal: sale.subtotal,
+        note: sale.note,
+        lines: ticketLines,
+      }, lang === 'es' ? 'es' : 'en')
     },
   },
 }

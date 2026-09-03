@@ -103,16 +103,16 @@ export default function BimeBatchesTab({
 
   const columns: Column<BatchResponse>[] = [
     { key: 'batchCode', header: t('bimeBatchesTab.code'), render: b => b.batchCode },
-    { key: 'variant', header: t('bimeBatchesTab.variant'), render: b => variantLabel(b.variantId) },
+    { key: 'variant', wide: true, header: t('bimeBatchesTab.variant'), render: b => variantLabel(b.variantId) },
     {
       key: 'expiry', header: t('bimeBatchesTab.expiry'),
       render: b => b.expiryDate
         ? <span className={soon(b.expiryDate) ? 'feedback-error' : undefined}>{b.expiryDate}</span>
         : <span className="td-muted">—</span>,
     },
-    { key: 'onHand', header: t('bimeBatchesTab.onHand'), render: b => String(b.totalQuantity) },
+    { key: 'onHand', narrow: true, header: t('bimeBatchesTab.onHand'), render: b => String(b.totalQuantity) },
     {
-      key: 'status', header: t('bimeBatchesTab.status'),
+      key: 'status', narrow: true, header: t('bimeBatchesTab.status'),
       render: b => <span className={`status-badge ${b.status === 'ACTIVE' ? 'status-ok' : 'status-fail'}`}>
         {t(`bimeBatchesTab.statuses.${b.status}`)}
       </span>,
@@ -171,6 +171,7 @@ export default function BimeBatchesTab({
       </div>
       {list.state.status === 'error' && <Feedback state={list.state} />}
       <DataTable
+          fixed
         columns={columns}
         rows={rows}
         rowKey={b => b.id}
