@@ -365,7 +365,7 @@ export default function BimeStockPage({ token, permissions }: Props) {
   const locateTotal = locateHit ? locateHit.variant.stock.reduce((n, s) => n + s.quantity, 0) : 0
 
   const movementColumns: Column<StockMovementResponse>[] = [
-    { key: 'type', narrow: true, header: t('bimeStockPage.type'), render: m => <span className="role-badge">{t(`bimeStockPage.movementTypes.${m.movementType}`)}</span> },
+    { key: 'type', header: t('bimeStockPage.type'), render: m => <span className="role-badge">{t(`bimeStockPage.movementTypes.${m.movementType}`)}</span> },
     {
       key: 'delta',
       header: t('bimeStockPage.delta'),

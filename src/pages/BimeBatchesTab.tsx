@@ -110,9 +110,9 @@ export default function BimeBatchesTab({
         ? <span className={soon(b.expiryDate) ? 'feedback-error' : undefined}>{b.expiryDate}</span>
         : <span className="td-muted">—</span>,
     },
-    { key: 'onHand', narrow: true, header: t('bimeBatchesTab.onHand'), render: b => String(b.totalQuantity) },
+    { key: 'onHand', header: t('bimeBatchesTab.onHand'), render: b => String(b.totalQuantity) },
     {
-      key: 'status', narrow: true, header: t('bimeBatchesTab.status'),
+      key: 'status', header: t('bimeBatchesTab.status'),
       render: b => <span className={`status-badge ${b.status === 'ACTIVE' ? 'status-ok' : 'status-fail'}`}>
         {t(`bimeBatchesTab.statuses.${b.status}`)}
       </span>,

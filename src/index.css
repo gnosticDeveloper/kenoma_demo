@@ -531,17 +531,16 @@ button, input, select {
 .data-table th.sortable { cursor: pointer; user-select: none; }
 .sort-arrow { color: var(--color-accent); }
 .data-table td { padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--color-border-faint); vertical-align: middle; }
-/* Columns flagged `narrow` (movement type, transfer/batch status, unit kind) hug their
-   content so the table's slack width goes to the text columns instead. width:1px in an
-   auto-layout table resolves to the cell's min-content. */
 /* Compact tables (Stock, Transfers, Batches, Units): deterministic column widths.
-   `dt-wide` soaks the leftover; `dt-narrow` is for numbers/pills; the rest get a
-   medium default. Long text wraps within its column instead of stretching it.
-   Guarded above the mobile breakpoint so the ≤40em stacked-card table view wins. */
+   `dt-wide` soaks the leftover width; every other column gets a fixed medium width
+   and wraps text within it, so no column can hog the table. Guarded above the mobile
+   breakpoint so the <=40em stacked-card table view wins. */
 @media (min-width: 40.0625em) {
   .data-table-fixed { table-layout: fixed; }
-  .data-table-fixed th, .data-table-fixed td { width: 8.5rem; overflow-wrap: anywhere; }
-  .data-table-fixed th.dt-narrow, .data-table-fixed td.dt-narrow { width: 5rem; white-space: normal; }
+  /* Every non-wide column: a fixed medium width; the `wide` column (variant / route /
+     name) takes whatever is left. Kept modest so a 5-6 column table still leaves the
+     wide column real room. Long pills/labels wrap to two lines rather than stretch. */
+  .data-table-fixed th, .data-table-fixed td { width: 7rem; overflow-wrap: break-word; }
   .data-table-fixed th.dt-wide, .data-table-fixed td.dt-wide { width: auto; }
 }
 .data-table tr:last-child td { border-bottom: none; }
@@ -564,6 +563,8 @@ button, input, select {
 .status-ok::before { background: var(--color-success); }
 .status-fail { background: var(--color-danger-soft); color: var(--color-danger); }
 .status-fail::before { background: var(--color-danger); }
+.status-muted { background: var(--color-border-faint); color: var(--color-text-muted); }
+.status-muted::before { background: var(--color-text-muted); }
 
 .empty-state { padding: 1.25rem 0.75rem; color: var(--color-text-muted); font-size: 0.8125rem; font-style: italic; }
 .no-perms { padding: 4rem 1.5rem; text-align: center; color: var(--color-text-muted); }
